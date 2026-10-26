@@ -1,0 +1,9 @@
+{
+  "values": [
+    "modtemplate:foo_controller",
+    "modtemplate:example_machine",
+    "modtemplate:silver_ore",
+    "modtemplate:silver_block",
+    "modtemplate:foo_port"
+  ]
+}

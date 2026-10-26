@@ -1,0 +1,19 @@
+{
+  "feature": "modtemplate:silver_ore",
+  "placement": [
+    {
+      "type": "minecraft:count",
+      "count": 4
+    },
+    {
+      "type": "minecraft:in_square"
+    },
+    {
+      "type": "modtemplate:configurable_ore",
+      "material": "silver"
+    },
+    {
+      "type": "minecraft:biome"
+    }
+  ]
+}

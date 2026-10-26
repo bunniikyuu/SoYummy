@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "modtemplate:item/tools/silver_sword"
+  }
+}

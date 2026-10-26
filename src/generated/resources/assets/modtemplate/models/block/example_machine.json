@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/orientable_with_bottom",
+  "textures": {
+    "bottom": "modtemplate:block/example_machine/side",
+    "front": "modtemplate:block/example_machine/front",
+    "side": "modtemplate:block/example_machine/side",
+    "top": "modtemplate:block/example_machine/side"
+  }
+}

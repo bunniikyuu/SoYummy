@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "modtemplate:block/foo_controller",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "modtemplate:block/foo_controller"
+    },
+    "facing=south": {
+      "model": "modtemplate:block/foo_controller",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "modtemplate:block/foo_controller",
+      "y": 270
+    }
+  }
+}

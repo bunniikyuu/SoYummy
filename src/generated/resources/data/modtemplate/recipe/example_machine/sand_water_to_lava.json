@@ -1,0 +1,26 @@
+{
+  "type": "modtemplate:example_machine",
+  "energy_per_tick": 20,
+  "fluid_inputs": [
+    {
+      "amount": 1000,
+      "fluid": "minecraft:water"
+    },
+    {
+      "amount": 1000,
+      "tag": "c:heavy_water"
+    }
+  ],
+  "fluid_outputs": [
+    {
+      "fluid": "minecraft:lava"
+    }
+  ],
+  "item_inputs": [
+    {
+      "count": 1,
+      "item": "minecraft:sand"
+    }
+  ],
+  "process_time": 200
+}

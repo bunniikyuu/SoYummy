@@ -1,0 +1,138 @@
+name: Setup Mod
+
+on:
+  workflow_dispatch:
+    inputs:
+      mod_id:
+        description: 'Mod ID — lowercase letters, digits, underscores (e.g. my_mod)'
+        required: true
+      mod_name:
+        description: 'Display name (e.g. My Awesome Mod)'
+        required: true
+      mod_group:
+        description: 'Java package / Maven group (e.g. com.yourname.mymod)'
+        required: true
+      author:
+        description: 'Author name shown in mod info'
+        required: true
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate inputs
+        run: |
+          if ! echo "${{ inputs.mod_id }}" | grep -qE '^[a-z][a-z0-9_]*$'; then
+            echo "::error::mod_id must be lowercase letters/digits/underscores, starting with a letter"
+            exit 1
+          fi
+          if ! echo "${{ inputs.mod_group }}" | grep -qE '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$'; then
+            echo "::error::mod_group must be a valid Java package name (e.g. com.example.mymod)"
+            exit 1
+          fi
+
+      - name: Rename and rewrite mod
+        env:
+          NEW_ID:    ${{ inputs.mod_id }}
+          NEW_NAME:  ${{ inputs.mod_name }}
+          NEW_GROUP: ${{ inputs.mod_group }}
+          NEW_AUTHOR: ${{ inputs.author }}
+        run: |
+          set -euo pipefail
+
+          OLD_ID="modtemplate"
+          OLD_GROUP="igentuman.modtemplate"
+          OLD_AUTHOR="igentuman"
+          OLD_SRC_PATH="igentuman/modtemplate"
+          NEW_SRC_PATH="${NEW_GROUP//.//}"
+
+          # Escape dots for use in sed regex patterns
+          OLD_ID_ESC=$(printf '%s\n' "$OLD_ID" | sed 's/[.[\*^$]/\\&/g')
+          OLD_GROUP_ESC=$(printf '%s\n' "$OLD_GROUP" | sed 's/[.[\*^$]/\\&/g')
+
+          echo "==> gradle.properties"
+          sed -i \
+            "s/^mod_id=.*/mod_id=${NEW_ID}/" \
+            gradle.properties
+          sed -i \
+            "s/^mod_name=.*/mod_name=${NEW_NAME}/" \
+            gradle.properties
+          sed -i \
+            "s/^mod_group_id=.*/mod_group_id=${NEW_GROUP}/" \
+            gradle.properties
+
+          echo "==> neoforge.mods.toml"
+          sed -i \
+            "s/^authors=\"${OLD_AUTHOR}\"/authors=\"${NEW_AUTHOR}\"/" \
+            src/main/resources/META-INF/neoforge.mods.toml
+
+          echo "==> kubejs.plugins.txt"
+          sed -i \
+            "s/${OLD_GROUP_ESC}/${NEW_GROUP}/g; s/${OLD_ID_ESC}/${NEW_ID}/g" \
+            src/main/resources/kubejs.plugins.txt
+
+          echo "==> mixin JSON (content then rename)"
+          sed -i \
+            "s/${OLD_GROUP_ESC}\.mixin/${NEW_GROUP}.mixin/g" \
+            "src/main/resources/${OLD_ID}.mixins.json"
+          mv "src/main/resources/${OLD_ID}.mixins.json" \
+             "src/main/resources/${NEW_ID}.mixins.json"
+
+          echo "==> Java sources: replace package/import strings"
+          find src/main/java src/test/java -name "*.java" 2>/dev/null | while read -r f; do
+            sed -i "s/${OLD_GROUP_ESC}/${NEW_GROUP}/g" "$f"
+            sed -i "s/\"${OLD_ID_ESC}\"/${NEW_ID}\"/g; s/\"${OLD_ID_ESC}:/\"${NEW_ID}:/g" "$f"
+          done
+
+          echo "==> Java sources: move directory tree"
+          if [ -d "src/main/java/${OLD_SRC_PATH}" ]; then
+            mkdir -p "src/main/java/${NEW_SRC_PATH}"
+            cp -r "src/main/java/${OLD_SRC_PATH}/." "src/main/java/${NEW_SRC_PATH}/"
+            # Remove old top-level vendor dir (igentuman)
+            rm -rf "src/main/java/$(echo "${OLD_SRC_PATH}" | cut -d/ -f1)"
+          fi
+          if [ -d "src/test/java/${OLD_SRC_PATH}" ]; then
+            mkdir -p "src/test/java/${NEW_SRC_PATH}"
+            cp -r "src/test/java/${OLD_SRC_PATH}/." "src/test/java/${NEW_SRC_PATH}/"
+            rm -rf "src/test/java/$(echo "${OLD_SRC_PATH}" | cut -d/ -f1)"
+          fi
+
+          echo "==> Resource directories: rename modid namespace"
+          for base in src/main/resources src/generated/resources; do
+            for sub in assets data; do
+              old_dir="${base}/${sub}/${OLD_ID}"
+              new_dir="${base}/${sub}/${NEW_ID}"
+              if [ -d "$old_dir" ]; then
+                mv "$old_dir" "$new_dir"
+              fi
+            done
+          done
+
+          echo "==> Resource files: replace modid in content"
+          find src/main/resources src/generated/resources -type f \
+               \( -name "*.json" -o -name "*.toml" -o -name "*.txt" -o -name "*.cfg" \) \
+               2>/dev/null | while read -r f; do
+            sed -i \
+              "s/${OLD_GROUP_ESC}/${NEW_GROUP}/g; \
+               s/\"${OLD_ID_ESC}:/\"${NEW_ID}:/g; \
+               s/${OLD_ID_ESC}:/${NEW_ID}:/g" \
+              "$f"
+          done
+
+          echo "==> Self-delete this setup workflow"
+          rm -f .github/workflows/setup-mod.yml
+
+          echo "Done."
+
+      - name: Commit
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: initialize mod — id=${{ inputs.mod_id }}, group=${{ inputs.mod_group }}, author=${{ inputs.author }}"
+          git push

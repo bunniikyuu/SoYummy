@@ -1,0 +1,1 @@
+igentuman.modtemplate.compat.kubejs.ModKubeJSPlugin modtemplate
